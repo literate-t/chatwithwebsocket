@@ -1,13 +1,40 @@
-// // @ts-check
+// @ts-check
 
+const path = require('path');
 const Koa = require('koa');
 const Pug = require('koa-pug');
-const path = require('path');
-
-const app = new Koa();
+const websockify = require('koa-websocket');
+const Router = require('@koa/router');
+const serve = require('koa-static');
+const mount = require('koa-mount');
 
 // @ts-ignore
-const pug = new Pug({
+const wsRouter = Router();
+
+wsRouter.get('/ws', async (ctx, next) => {
+  // ctx.websocket.send('Hello World');
+  ctx.websocket.on('message', (message) => {
+    console.log(message.toString());
+  });
+
+  return next;
+});
+
+const app = websockify(new Koa());
+// app.ws.use((ctx) => {
+//   // the websocket is added to the context as `ctx.websocket`.
+//   ctx.websocket.send('Hello World');
+//   ctx.websocket.on('message', (message) => {
+//     console.log(message);
+//   });
+// });
+
+app.ws.use(mount('/public', serve('src/public')));
+app.ws.use(wsRouter.routes()).use(wsRouter.allowedMethods());
+
+// @ts-ignore
+// eslint-disable-next-line no-new
+new Pug({
   viewPath: path.resolve(__dirname, './views'),
   app,
 });
