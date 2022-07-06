@@ -14,8 +14,33 @@ const app = websockify(new Koa());
 
 wsRouter.get('/ws', async (ctx, next) => {
   // ctx.websocket.send('Hello World');
-  ctx.websocket.on('message', (message) => {
-    console.log(message.toString());
+  ctx.websocket.on('message', (data) => {
+    try {
+      const { message, nickname } = JSON.parse(data);
+      // 이건 unicast 보낸 사람한테만 보냄
+      // ctx.websocket.send(
+      //   JSON.stringify({
+      //     nickname,
+      //     message,
+      //   })
+      // );
+
+      const { server } = app.ws;
+      if (!server) {
+        return;
+      }
+
+      server.clients.forEach((client) => {
+        client.send(
+          JSON.stringify({
+            nickname,
+            message,
+          })
+        );
+      });
+    } catch (err) {
+      console.error(err);
+    }
   });
 
   // return next;
