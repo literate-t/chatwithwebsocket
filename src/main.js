@@ -10,6 +10,7 @@ const mount = require('koa-mount');
 
 // @ts-ignore
 const wsRouter = Router();
+const app = websockify(new Koa());
 
 wsRouter.get('/ws', async (ctx, next) => {
   // ctx.websocket.send('Hello World');
@@ -17,10 +18,9 @@ wsRouter.get('/ws', async (ctx, next) => {
     console.log(message.toString());
   });
 
-  return next;
+  // return next;
 });
 
-const app = websockify(new Koa());
 // app.ws.use((ctx) => {
 //   // the websocket is added to the context as `ctx.websocket`.
 //   ctx.websocket.send('Hello World');
@@ -29,7 +29,7 @@ const app = websockify(new Koa());
 //   });
 // });
 
-app.ws.use(mount('/public', serve('src/public')));
+app.use(mount('/qwer', serve('src/public')));
 app.ws.use(wsRouter.routes()).use(wsRouter.allowedMethods());
 
 // @ts-ignore
