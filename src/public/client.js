@@ -42,11 +42,19 @@
     inputTag.value = '';
   });
 
-  socket.addEventListener('message', (e) => {
-    // chatArray.push(JSON.parse(e.data));
+  const renderChats = (msg) => {
     const chatDiv = document.createElement('div');
-    const msg = JSON.parse(e.data);
     chatDiv.textContent = `${msg.nickname}> ${msg.message}`;
     chatListTag.append(chatDiv);
+  };
+
+  socket.addEventListener('message', (e) => {
+    const { type, payload: msg } = JSON.parse(e.data);
+
+    if (type === 'sync') {
+      msg.map((m) => renderChats(m));
+    } else if (type === 'chat') {
+      renderChats(msg);
+    }
   });
 })();

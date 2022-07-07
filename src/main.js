@@ -7,16 +7,54 @@ const websockify = require('koa-websocket');
 const Router = require('@koa/router');
 const serve = require('koa-static');
 const mount = require('koa-mount');
+const mongoClient = require('./mongo');
 
 // @ts-ignore
 const wsRouter = Router();
 const app = websockify(new Koa());
 
+/* eslint-disable-next-line no-underscore-dangle */
+const _client = mongoClient.connect();
+
+const getChatListCollection = async () => {
+  await _client;
+  return mongoClient.db('chat').collection('chatList');
+};
+
+/**
+ * @typedef Chat
+ * @property {string} nickname
+ * @property {string} message
+ */
+
 wsRouter.get('/ws', async (ctx, next) => {
-  // ctx.websocket.send('Hello World');
-  ctx.websocket.on('message', (data) => {
+  const chatListCollection = await getChatListCollection();
+  const chatListCursor = chatListCollection.find(
+    {},
+    {
+      sort: {
+        createTime: 1, // 오름차순
+      },
+    }
+  );
+  const chatList = await chatListCursor.toArray();
+  ctx.websocket.send(
+    JSON.stringify({
+      type: 'sync',
+      payload: chatList,
+    })
+  );
+
+  ctx.websocket.on('message', async (data) => {
     try {
-      const { message, nickname } = JSON.parse(data);
+      /** @type {Chat} */
+      const chat = JSON.parse(data);
+      await chatListCollection.insertOne({
+        ...chat,
+        createTime: new Date(),
+      });
+
+      const { message, nickname } = chat;
       // 이건 unicast 보낸 사람한테만 보냄
       // ctx.websocket.send(
       //   JSON.stringify({
@@ -33,8 +71,11 @@ wsRouter.get('/ws', async (ctx, next) => {
       server.clients.forEach((client) => {
         client.send(
           JSON.stringify({
-            nickname,
-            message,
+            type: 'chat',
+            payload: {
+              nickname,
+              message,
+            },
           })
         );
       });
